@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Plus, Minus, ArrowLeft, Volume2 } from 'lucide-react';
+import { ArrowLeft, Volume2 } from 'lucide-react';
 
 // --- 1. Custom Speech Synthesis Hook ---
 /**
@@ -97,6 +97,7 @@ const FormInput = ({ label, name, value, onChange, required = false, type = 'tex
             value={value}
             onChange={onChange}
             className="p-8 text-4xl text-blue-900 border-4 border-gray-300 rounded-2xl focus:ring-4 focus:ring-blue-500 focus:border-blue-500 h-24"
+            required={required}
         />
     </div>
 );
@@ -134,31 +135,46 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
     const [currentSection, setCurrentSection] = useState(0);
     const scrollRef = useRef(null);
     const autoAdvanceTimeoutRef = useRef(null);
-    const [patientInfo, setPatientInfo] = useState({
-        firstName: '', lastName: '', mi: '', dob: '', sex: '', social: '',
-        address1: '', address2: '', city: '', state: '', zip: '',
-        contactBest: '', contactSecondary: '', email: '', insurance: null,
-    });
-    const [demographics, setDemographics] = useState({
-        language: '', pronouns: '', ethnicity: '', race: '', employment: '',
-    });
-    const [emergencyContacts] = useState([{ nameFirst: '', nameLast: '', phonePrimary: '', phoneSecondary: '', address1: '', address2: '', relation: 'Parent' }]);
     
-    // Define all section titles
+    // State to hold form data (simplified for this demo)
+    const [formData, setFormData] = useState({
+        employeeName: '',
+        patientName: '',
+        isFamilyMember: null,
+        conditionCommenced: '',
+        conditionDuration: '',
+        isSeriousHealthCondition: null,
+        employeeAbleToWork: null,
+        patientRequiresAssistance: null,
+        careTimeNeeded: '',
+        isIntermittentLeave: null,
+        employeeSignature: '',
+        signatureDate: ''
+    });
+    
+    // Define all section titles based on FMLA/CFRA form structure
     const sections = useMemo(() => ([
-        'Full Name', 'Sex at Birth', 'Date of Birth', 'Social Security Number',
-        'Address Line 1', 'Address Line 2', 'City', 'State', 'Zip Code',
-        'Best Contact Number', 'Secondary Phone', 'Email Address',
-        'Primary Language', 'Pronouns', 'Ethnicity', 'Race', 'Employment Status',
-        'Insurance', 'Emergency Contact Name', 'Emergency Contact Phone',
-        'Signature'
+        'Full Name', // Maps to Q1
+        'Patient Name and Relationship', // Maps to Q2
+        'Date Medical Condition Commenced', // Maps to Q3
+        'Probable Duration of Condition', // Maps to Q4
+        'Serious Health Condition Check', // Maps to Q5
+        'Employee Ability to Work', // Maps to Q6
+        'Patient Assistance Needs', // Maps to Q7
+        'Estimated Period of Care', // Maps to Q8
+        'Intermittent Leave Request', // Maps to Q9 (part 1)
+        'Reduced Schedule / Time Off', // Maps to Q9 (part 2)
+        'Employee Signature and Date', // Maps to Q10 / Signature Area
     ]), []);
 
     // TTS Logic for Sequential Reading (Triggered when currentSection changes)
     useEffect(() => {
-        // Stop speech when component unmounts
+        // Cleanup function: stop speech when component unmounts
         return () => {
             stop();
+            if (autoAdvanceTimeoutRef.current) {
+                clearTimeout(autoAdvanceTimeoutRef.current);
+            }
         };
     }, [stop]);
 
@@ -168,15 +184,15 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
             const sectionTitle = sections[currentSection];
             
             // Speak only the current section's title
-            speak( sectionTitle);
+            speak(sectionTitle);
         }
     }, [currentSection, sections, speak]); 
 
-    // Form Handlers
-    const handlePatientChange = (e) => {
+    // General Form Handlers
+    const handleFormChange = (e) => {
         const { name, value, type, checked } = e.target;
-        const targetState = name in patientInfo ? setPatientInfo : setDemographics;
-        targetState(prev => ({
+        
+        setFormData(prev => ({
             ...prev,
             [name]: type === 'radio' ? (checked ? value : prev[name]) : value
         }));
@@ -186,15 +202,16 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
             clearTimeout(autoAdvanceTimeoutRef.current);
         }
         
-        // Auto-advance to next section when field is filled
+        // Auto-advance logic: if a field is filled/selected, wait and move to the next section
         if (value.trim() !== '' || (type === 'radio' && checked)) {
             autoAdvanceTimeoutRef.current = setTimeout(() => {
                 goToNextSection();
-            }, 1500);
+            }, 2000); // 2 second delay for user to register the change
         }
     };
 
     const goToPreviousSection = () => {
+        stop(); // Stop speech before navigating
         if (currentSection > 0) {
             const newSection = currentSection - 1;
             setCurrentSection(newSection);
@@ -203,11 +220,13 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
                 element.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         } else {
-            onBack();
+            // If on the first section, go back to the start screen
+            onBack(); 
         }
     };
 
     const goToNextSection = () => {
+        stop(); // Stop speech before navigating
         if (currentSection < sections.length - 1) {
             const newSection = currentSection + 1;
             setCurrentSection(newSection);
@@ -218,167 +237,152 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
         }
     };
     
-    // Render Form (omitted for brevity, remains the same as previous versions)
+    // Render Form
     return (
         <div className="min-h-screen bg-blue-50 overflow-hidden">
             <div ref={scrollRef} className="h-screen overflow-y-auto scroll-smooth">
                 
-                {/* Full Name (Section 0) */}
+                {/* 1. Employee Name (Q1) */}
                 <FormSection title={sections[0]} id="section-0">
-                    <div className="col-span-2">
-                        <div className="grid grid-cols-3 gap-4">
-                            <FormInput label="First Name *" name="firstName" value={patientInfo.firstName} onChange={handlePatientChange} required />
-                            <FormInput label="Middle Initial" name="mi" value={patientInfo.mi} onChange={handlePatientChange} />
-                            <FormInput label="Last Name *" name="lastName" value={patientInfo.lastName} onChange={handlePatientChange} required />
-                        </div>
-                    </div>
+                    <FormInput label="Full Name *" name="employeeName" value={formData.employeeName} onChange={handleFormChange} required />
                 </FormSection>
 
-                {/* Sex at Birth (Section 1) */}
+                {/* 2. Patient Name and Relationship (Q2) */}
                 <FormSection title={sections[1]} id="section-1">
+                    <FormInput label="Patient Full Name (if different) *" name="patientName" value={formData.patientName} onChange={handleFormChange} required />
                     <div className="col-span-2">
+                        <label className="text-6xl font-bold text-blue-900 mb-8 block text-center">Is the patient the employee's family member?</label>
                         <div className="flex space-x-20 justify-center">
                             <label className="flex items-center text-blue-600 text-6xl">
-                                <input type="radio" name="sex" value="Male" checked={patientInfo.sex === 'Male'} onChange={handlePatientChange} className="mr-8 w-16 h-16" />
-                                Male
-                            </label>
-                            <label className="flex items-center text-blue-600 text-6xl">
-                                <input type="radio" name="sex" value="Female" checked={patientInfo.sex === 'Female'} onChange={handlePatientChange} className="mr-8 w-16 h-16" />
-                                Female
-                            </label>
-                        </div>
-                    </div>
-                </FormSection>
-
-                {/* Date of Birth (Section 2) */}
-                <FormSection title={sections[2]} id="section-2">
-                    <div className="col-span-2 flex justify-center">
-                        <div className="w-1/2">
-                            <FormInput label="Date of Birth *" name="dob" value={patientInfo.dob} onChange={handlePatientChange} required type="date" />
-                        </div>
-                    </div>
-                </FormSection>
-
-                {/* Social Security Number (Section 3) */}
-                <FormSection title={sections[3]} id="section-3">
-                    <div className="col-span-2 flex justify-center">
-                        <div className="w-1/2">
-                            <FormInput label="Social Security Number" name="social" value={patientInfo.social} onChange={handlePatientChange} />
-                        </div>
-                    </div>
-                </FormSection>
-
-                {/* Address Line 1 (Section 4) */}
-                <FormSection title={sections[4]} id="section-4">
-                    <FormInput label="Address Line 1 *" name="address1" value={patientInfo.address1} onChange={handlePatientChange} required />
-                </FormSection>
-
-                {/* Address Line 2 (Section 5) */}
-                <FormSection title={sections[5]} id="section-5">
-                    <FormInput label="Address Line 2" name="address2" value={patientInfo.address2} onChange={handlePatientChange} />
-                </FormSection>
-
-                {/* City (Section 6) */}
-                <FormSection title={sections[6]} id="section-6">
-                    <FormInput label="City" name="city" value={patientInfo.city} onChange={handlePatientChange} />
-                </FormSection>
-
-                {/* State (Section 7) */}
-                <FormSection title={sections[7]} id="section-7">
-                    <FormInput label="State" name="state" value={patientInfo.state} onChange={handlePatientChange} />
-                </FormSection>
-
-                {/* Zip Code (Section 8) */}
-                <FormSection title={sections[8]} id="section-8">
-                    <FormInput label="Zip Code" name="zip" value={patientInfo.zip} onChange={handlePatientChange} />
-                </FormSection>
-
-                {/* Best Contact Number (Section 9) */}
-                <FormSection title={sections[9]} id="section-9">
-                    <FormInput label="Best Number of Contact" name="contactBest" value={patientInfo.contactBest} onChange={handlePatientChange} />
-                </FormSection>
-
-                {/* Secondary Phone (Section 10) */}
-                <FormSection title={sections[10]} id="section-10">
-                    <FormInput label="Secondary Phone Number" name="contactSecondary" value={patientInfo.contactSecondary} onChange={handlePatientChange} />
-                </FormSection>
-
-                {/* Email Address (Section 11) */}
-                <FormSection title={sections[11]} id="section-11">
-                    <FormInput label="Email Address *" name="email" value={patientInfo.email} onChange={handlePatientChange} required />
-                </FormSection>
-
-                {/* Primary Language (Section 12) */}
-                <FormSection title={sections[12]} id="section-12">
-                    <FormInput label="Primary Language" name="language" value={demographics.language} onChange={handlePatientChange} />
-                </FormSection>
-
-                {/* Pronouns (Section 13) */}
-                <FormSection title={sections[13]} id="section-13">
-                    <FormInput label="Pronouns" name="pronouns" value={demographics.pronouns} onChange={handlePatientChange} />
-                </FormSection>
-
-                {/* Ethnicity (Section 14) */}
-                <FormSection title={sections[14]} id="section-14">
-                    <FormInput label="Ethnicity" name="ethnicity" value={demographics.ethnicity} onChange={handlePatientChange} />
-                </FormSection>
-
-                {/* Race (Section 15) */}
-                <FormSection title={sections[15]} id="section-15">
-                    <FormInput label="Race" name="race" value={demographics.race} onChange={handlePatientChange} required />
-                </FormSection>
-
-                {/* Employment Status (Section 16) */}
-                <FormSection title={sections[16]} id="section-16">
-                    <FormInput label="Employment Status" name="employment" value={demographics.employment} onChange={handlePatientChange} />
-                </FormSection>
-
-                {/* Insurance (Section 17) */}
-                <FormSection title={sections[17]} id="section-17">
-                    <div className="col-span-2">
-                        <label className="text-6xl font-bold text-blue-900 mb-8 block text-center">Do you have health insurance? *</label>
-                        <div className="flex space-x-20 justify-center">
-                            <label className="flex items-center text-blue-600 text-6xl">
-                                <input type="radio" name="insurance" value="Yes" checked={patientInfo.insurance === 'Yes'} onChange={handlePatientChange} className="mr-8 w-16 h-16" />
+                                <input type="radio" name="isFamilyMember" value="Yes" checked={formData.isFamilyMember === 'Yes'} onChange={handleFormChange} className="mr-8 w-16 h-16" />
                                 Yes
                             </label>
                             <label className="flex items-center text-blue-600 text-6xl">
-                                <input type="radio" name="insurance" value="No" checked={patientInfo.insurance === 'No'} onChange={handlePatientChange} className="mr-8 w-16 h-16" />
+                                <input type="radio" name="isFamilyMember" value="No" checked={formData.isFamilyMember === 'No'} onChange={handleFormChange} className="mr-8 w-16 h-16" />
                                 No
                             </label>
                         </div>
                     </div>
                 </FormSection>
 
-                {/* Emergency Contact Name (Section 18) */}
-                <FormSection title={sections[18]} id="section-18">
-                    <div className="space-y-8">
-                        <FormInput label="First Name *" name="emergencyFirstName" value={emergencyContacts[0]?.nameFirst || ''} required />
-                        <FormInput label="Last Name *" name="emergencyLastName" value={emergencyContacts[0]?.nameLast || ''} required />
+                {/* 3. Date Medical Condition Commenced (Q3) */}
+                <FormSection title={sections[2]} id="section-2">
+                    <div className="col-span-2 flex justify-center">
+                        <div className="w-1/2">
+                            <FormInput label="Date Condition Commenced *" name="conditionCommenced" value={formData.conditionCommenced} onChange={handleFormChange} required type="date" />
+                        </div>
                     </div>
                 </FormSection>
 
-                {/* Emergency Contact Phone (Section 19) */}
-                <FormSection title={sections[19]} id="section-19">
-                    <FormInput label="Primary Phone *" name="emergencyPhone" value={emergencyContacts[0]?.phonePrimary || ''} required />
+                {/* 4. Probable Duration of Condition (Q4) */}
+                <FormSection title={sections[3]} id="section-3">
+                    <FormInput label="Probable Duration (e.g., 6 weeks, 3 months, permanent)" name="conditionDuration" value={formData.conditionDuration} onChange={handleFormChange} required />
                 </FormSection>
 
-                {/* Signature (Section 20) */}
-                <FormSection title={sections[20]} id="section-20">
+                {/* 5. Serious Health Condition Check (Q5) */}
+                <FormSection title={sections[4]} id="section-4">
                     <div className="col-span-2">
-                        <div className="border border-gray-400 w-full h-32 rounded-lg bg-gray-50 flex items-center justify-center text-gray-400 mb-4">
-                            [Draw/Type Signature Placeholder]
+                        <label className="text-6xl font-bold text-blue-900 mb-8 block text-center">Does the patient's condition qualify as a serious health condition?</label>
+                        <div className="flex space-x-20 justify-center">
+                            <label className="flex items-center text-blue-600 text-6xl">
+                                <input type="radio" name="isSeriousHealthCondition" value="Yes" checked={formData.isSeriousHealthCondition === 'Yes'} onChange={handleFormChange} className="mr-8 w-16 h-16" />
+                                Yes
+                            </label>
+                            <label className="flex items-center text-blue-600 text-6xl">
+                                <input type="radio" name="isSeriousHealthCondition" value="No" checked={formData.isSeriousHealthCondition === 'No'} onChange={handleFormChange} className="mr-8 w-16 h-16" />
+                                No
+                            </label>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <FormInput label="Type Name" name="typeName" required />
-                            <FormInput label="Relationship to Patient" name="relationType" required />
+                    </div>
+                </FormSection>
+
+                {/* 6. Employee Ability to Work (Q6 - simplified) */}
+                <FormSection title={sections[5]} id="section-5">
+                    <div className="col-span-2">
+                        <label className="text-6xl font-bold text-blue-900 mb-8 block text-center">Is the employee able to perform work of any kind?</label>
+                        <div className="flex space-x-20 justify-center">
+                            <label className="flex items-center text-blue-600 text-6xl">
+                                <input type="radio" name="employeeAbleToWork" value="Yes" checked={formData.employeeAbleToWork === 'Yes'} onChange={handleFormChange} className="mr-8 w-16 h-16" />
+                                Yes
+                            </label>
+                            <label className="flex items-center text-blue-600 text-6xl">
+                                <input type="radio" name="employeeAbleToWork" value="No" checked={formData.employeeAbleToWork === 'No'} onChange={handleFormChange} className="mr-8 w-16 h-16" />
+                                No
+                            </label>
                         </div>
+                    </div>
+                </FormSection>
+
+                {/* 7. Patient Assistance Needs (Q7 - simplified) */}
+                <FormSection title={sections[6]} id="section-6">
+                    <div className="col-span-2">
+                        <label className="text-6xl font-bold text-blue-900 mb-8 block text-center">Does the patient require assistance for basic needs (medical, hygiene, etc.)?</label>
+                        <div className="flex space-x-20 justify-center">
+                            <label className="flex items-center text-blue-600 text-6xl">
+                                <input type="radio" name="patientRequiresAssistance" value="Yes" checked={formData.patientRequiresAssistance === 'Yes'} onChange={handleFormChange} className="mr-8 w-16 h-16" />
+                                Yes
+                            </label>
+                            <label className="flex items-center text-blue-600 text-6xl">
+                                <input type="radio" name="patientRequiresAssistance" value="No" checked={formData.patientRequiresAssistance === 'No'} onChange={handleFormChange} className="mr-8 w-16 h-16" />
+                                No
+                            </label>
+                        </div>
+                    </div>
+                </FormSection>
+
+                {/* 8. Estimated Period of Care (Q8) */}
+                <FormSection title={sections[7]} id="section-7">
+                    <FormInput label="Estimated Period of Time Care is Needed" name="careTimeNeeded" value={formData.careTimeNeeded} onChange={handleFormChange} required />
+                </FormSection>
+
+                {/* 9. Intermittent Leave Request (Q9 - Intermittent) */}
+                <FormSection title={sections[8]} id="section-8">
+                    <div className="col-span-2">
+                        <label className="text-6xl font-bold text-blue-900 mb-8 block text-center">Is intermittent leave medically necessary?</label>
+                        <div className="flex space-x-20 justify-center">
+                            <label className="flex items-center text-blue-600 text-6xl">
+                                <input type="radio" name="isIntermittentLeave" value="Yes" checked={formData.isIntermittentLeave === 'Yes'} onChange={handleFormChange} className="mr-8 w-16 h-16" />
+                                Yes
+                            </label>
+                            <label className="flex items-center text-blue-600 text-6xl">
+                                <input type="radio" name="isIntermittentLeave" value="No" checked={formData.isIntermittentLeave === 'No'} onChange={handleFormChange} className="mr-8 w-16 h-16" />
+                                No
+                            </label>
+                        </div>
+                    </div>
+                    {/* Simplified for space - a real form would have frequency/duration inputs here */}
+                </FormSection>
+
+                {/* 10. Reduced Schedule / Time Off (Q9 - Reduced Schedule/Appointments) */}
+                <FormSection title={sections[9]} id="section-9">
+                    <div className="col-span-2">
+                        <label className="text-6xl font-bold text-blue-900 mb-8 block text-center">Is a reduced work schedule or time off for appointments medically necessary?</label>
+                        <div className="flex space-x-20 justify-center">
+                            <label className="flex items-center text-blue-600 text-6xl">
+                                <input type="radio" name="isReducedSchedule" value="Yes" checked={formData.isReducedSchedule === 'Yes'} onChange={handleFormChange} className="mr-8 w-16 h-16" />
+                                Yes
+                            </label>
+                            <label className="flex items-center text-blue-600 text-6xl">
+                                <input type="radio" name="isReducedSchedule" value="No" checked={formData.isReducedSchedule === 'No'} onChange={handleFormChange} className="mr-8 w-16 h-16" />
+                                No
+                            </label>
+                        </div>
+                    </div>
+                </FormSection>
+
+                {/* 11. Employee Signature and Date (Q10/Signature Area) */}
+                <FormSection title={sections[10]} id="section-10">
+                    <div className="col-span-2">
+                        <label className="text-6xl font-bold text-blue-900 mb-8 block text-center">Employee Signature</label>
+                        <FormInput label="Digital Signature" name="employeeSignature" value={formData.employeeSignature} onChange={handleFormChange} required />
+                        <FormInput label="Date Signed" name="signatureDate" type="date" required />
+                        
                         <div className="flex justify-center space-x-4 mt-8">
                             <button onClick={onBack} className="py-3 px-8 bg-red-200 text-red-800 font-bold rounded-xl hover:bg-red-300 transition">
-                                Back
+                                Back to Start
                             </button>
-                            <button type="submit" className="py-3 px-8 bg-green-200 text-green-800 font-bold rounded-xl hover:bg-green-300 transition">
-                                Submit
+                            <button type="submit" className="py-3 px-8 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 transition">
+                                SUBMIT FORM
                             </button>
                         </div>
                     </div>
@@ -392,6 +396,7 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
                     <button
                         onClick={stop}
                         className="p-3 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition flex items-center space-x-2"
+                        aria-label="Stop reading"
                     >
                         <Volume2 className="w-6 h-6" />
                         <span className="font-semibold">Stop Reading</span>
@@ -455,7 +460,7 @@ const App = () => {
                     onBack={handleBack} 
                     stop={stop} 
                     isSpeaking={isSpeaking}
-                    speak={speak} // Passing the generic speak function
+                    speak={speak}
                 />
             )}
         </div>
