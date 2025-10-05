@@ -135,6 +135,8 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
     const [currentSection, setCurrentSection] = useState(0);
     const scrollRef = useRef(null);
     const autoAdvanceTimeoutRef = useRef(null);
+    const [isListening, setIsListening] = useState(false);
+    const recognitionRef = useRef(null);
     
     // State to hold form data (simplified for this demo)
     const [formData, setFormData] = useState({
@@ -198,8 +200,15 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
             const sectionTitle = sections[currentSection];
             const content = sectionContent[currentSection];
             
-            // Speak section title and content
+            // Speak section title and content, then start listening if it's a text input field
             speak(`${sectionTitle}. ${content}`);
+            
+            // Start listening after TTS finishes for text input fields
+            if (getCurrentFieldName()) {
+                setTimeout(() => {
+                    startListening();
+                }, 3000); // Wait 3 seconds for TTS to finish
+            }
         }
     }, [currentSection, sections, sectionContent, speak]); 
 
@@ -250,6 +259,67 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
                 element.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
+    };
+
+    const getCurrentFieldName = () => {
+        const fieldMap = {
+            0: 'employeeName',
+            1: 'patientName',
+            2: 'conditionCommenced',
+            3: 'conditionDuration',
+            7: 'careTimeNeeded',
+            10: 'employeeSignature'
+        };
+        return fieldMap[currentSection];
+    };
+
+    const startListening = () => {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            alert('Speech recognition not supported in this browser');
+            return;
+        }
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = false;
+        recognitionRef.current.interimResults = false;
+        recognitionRef.current.lang = 'en-US';
+
+        recognitionRef.current.onstart = () => {
+            setIsListening(true);
+        };
+
+        recognitionRef.current.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            const fieldName = getCurrentFieldName();
+            
+            if (fieldName) {
+                setFormData(prev => ({
+                    ...prev,
+                    [fieldName]: transcript
+                }));
+                
+                // Auto-advance after speech input
+                setTimeout(() => goToNextSection(), 1000);
+            }
+        };
+
+        recognitionRef.current.onend = () => {
+            setIsListening(false);
+        };
+
+        recognitionRef.current.onerror = () => {
+            setIsListening(false);
+        };
+
+        recognitionRef.current.start();
+    };
+
+    const stopListening = () => {
+        if (recognitionRef.current) {
+            recognitionRef.current.stop();
+        }
+        setIsListening(false);
     };
     
     // Render Form
@@ -426,6 +496,8 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
                         <span className="font-semibold">Re-Read Section</span>
                     </button>
                 )}
+                
+
             </div>
 
             <BackButton onClick={goToPreviousSection} />
