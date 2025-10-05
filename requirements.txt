@@ -3,3 +3,4 @@ pygame
 python-dotenv
 speechrecognition
 requests
+PyMuPDF
