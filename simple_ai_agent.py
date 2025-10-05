@@ -79,17 +79,21 @@ class SimpleAIAgent:
 if __name__ == "__main__":
     agent = SimpleAIAgent()
     
-    print("FoodHero AI Agent - Commands: 'quit', 'voice', or type message")
+    agent.speak_response("FoodHero AI Agent ready. Start speaking!")
+    
     while True:
-        user_input = input("\nYou: ")
-        if user_input.lower() == 'quit':
-            break
-        elif user_input.lower() == 'voice':
-            agent.voice_chat()
-        else:
+        try:
+            user_input = agent.listen_for_input()
+            
+            if "quit" in user_input.lower() or "exit" in user_input.lower():
+                agent.speak_response("Goodbye!")
+                break
+            
             response = agent.chat(user_input)
-            print(f"Agent: {response}")
-            # Optionally speak the response
-            speak = input("Speak response? (y/n): ")
-            if speak.lower() == 'y':
-                agent.speak_response(response)
+            agent.speak_response(response)
+            
+        except KeyboardInterrupt:
+            agent.speak_response("Goodbye!")
+            break
+        except Exception as e:
+            agent.speak_response("Sorry, I didn't catch that. Please try again.")
