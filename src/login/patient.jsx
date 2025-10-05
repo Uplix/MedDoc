@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { loginWithEmail } from '../firebase/auth';
+import { useNavigate } from 'react-router';
 
 const PatientLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,7 +21,7 @@ const PatientLogin = () => {
     } catch (error) {
       setError(error.message || 'An error occurred during login');
     } finally {
-      setIsLoading(false);
+      navigate('/form');
     }
   };
 
