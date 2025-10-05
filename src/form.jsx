@@ -424,16 +424,12 @@ const StartScreen = ({ onStart, speak }) => {
 
     return (
         <div className="min-h-screen bg-blue-50 flex items-center justify-center">
-            <div className="text-center">
-                <h1 className="text-6xl font-bold text-blue-900 mb-8">Voice-Guided Medical Form</h1>
-                <p className="text-3xl text-blue-700 mb-12">Click start and I'll guide you through each question with voice prompts</p>
-                <button
-                    onClick={handleStart}
-                    className="px-20 py-16 bg-green-200 text-green-800 text-8xl font-bold rounded-full hover:bg-green-300 transition duration-300 shadow-2xl"
-                >
-                    START FORM
-                </button>
-            </div>
+            <button
+                onClick={handleStart}
+                className="px-20 py-16 bg-green-200 text-green-800 text-8xl font-bold rounded-full hover:bg-green-300 transition duration-300 shadow-2xl"
+            >
+                START FORM
+            </button>
         </div>
     );
 };
@@ -479,9 +475,6 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
         'Does the patient\'s condition qualify as a serious health condition? Please say yes or no',
         'Is the employee able to perform work of any kind? Please say yes or no',
         'Does the patient require assistance for basic needs such as medical or hygiene? Please say yes or no',
-        'Please state the estimated period of time care is needed',
-        'Is intermittent leave medically necessary? Please say yes or no',
-        'Is a reduced work schedule or time off for appointments medically necessary? Please say yes or no',
         'Please provide your digital signature and today\'s date'
     ]), []);
 
@@ -596,7 +589,7 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
             <div ref={scrollRef} className="h-screen overflow-y-auto scroll-smooth">
                 
                 {/* 1. Employee Name (Q1) */}
-                <FormSection title="Question 1 of 11" id="section-0">
+                <FormSection title="Question 1 of 8" id="section-0">
                     <FormInput 
                         label="Full Name *" 
                         name="employeeName" 
@@ -610,7 +603,7 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
                 </FormSection>
 
                 {/* 2. Patient Name and Relationship (Q2) */}
-                <FormSection title="Question 2 of 11" id="section-1">
+                <FormSection title="Question 2 of 8" id="section-1">
                     <FormInput 
                         label="Patient Full Name (if different) *" 
                         name="patientName" 
@@ -633,7 +626,7 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
                 </FormSection>
 
                 {/* 3. Date Medical Condition Commenced (Q3) */}
-                <FormSection title="Question 3 of 11" id="section-2">
+                <FormSection title="Question 3 of 8" id="section-2">
                     <div className="col-span-2 flex justify-center">
                         <div className="w-1/2">
                             <FormInput 
@@ -652,7 +645,7 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
                 </FormSection>
 
                 {/* 4. Probable Duration of Condition (Q4) */}
-                <FormSection title="Question 4 of 11" id="section-3">
+                <FormSection title="Question 4 of 8" id="section-3">
                     <FormInput 
                         label="Probable Duration (e.g., 6 weeks, 3 months, permanent)" 
                         name="conditionDuration" 
@@ -666,7 +659,7 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
                 </FormSection>
 
                 {/* 5. Serious Health Condition Check (Q5) */}
-                <FormSection title="Question 5 of 11" id="section-4">
+                <FormSection title="Question 5 of 8" id="section-4">
                     <SpeechRadioGroup 
                         label="Does the patient's condition qualify as a serious health condition?"
                         name="isSeriousHealthCondition"
@@ -679,7 +672,7 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
                 </FormSection>
 
                 {/* 6. Employee Ability to Work (Q6 - simplified) */}
-                <FormSection title="Question 6 of 11" id="section-5">
+                <FormSection title="Question 6 of 8" id="section-5">
                     <SpeechRadioGroup 
                         label="Is the employee able to perform work of any kind?"
                         name="employeeAbleToWork"
@@ -692,7 +685,7 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
                 </FormSection>
 
                 {/* 7. Patient Assistance Needs (Q7 - simplified) */}
-                <FormSection title="Question 7 of 11" id="section-6">
+                <FormSection title="Question 7 of 8" id="section-6">
                     <SpeechRadioGroup 
                         label="Does the patient require assistance for basic needs (medical, hygiene, etc.)?"
                         name="patientRequiresAssistance"
@@ -704,48 +697,8 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
                     />
                 </FormSection>
 
-                {/* 8. Estimated Period of Care (Q8) */}
-                <FormSection title="Question 8 of 11" id="section-7">
-                    <FormInput 
-                        label="Estimated Period of Time Care is Needed" 
-                        name="careTimeNeeded" 
-                        value={formData.careTimeNeeded} 
-                        onChange={handleFormChange} 
-                        required 
-                        autoListen={currentSection === 7 && isAutoListening}
-                        onStartListening={handleStartListening}
-                        onVoiceCommand={handleVoiceCommand}
-                    />
-                </FormSection>
-
-                {/* 9. Intermittent Leave Request (Q9 - Intermittent) */}
-                <FormSection title="Question 9 of 11" id="section-8">
-                    <SpeechRadioGroup 
-                        label="Is intermittent leave medically necessary?"
-                        name="isIntermittentLeave"
-                        value={formData.isIntermittentLeave}
-                        onChange={handleFormChange}
-                        autoListen={currentSection === 8 && isAutoListening}
-                        onStartListening={handleStartListening}
-                        onVoiceCommand={handleVoiceCommand}
-                    />
-                </FormSection>
-
-                {/* 10. Reduced Schedule / Time Off (Q9 - Reduced Schedule/Appointments) */}
-                <FormSection title="Question 10 of 11" id="section-9">
-                    <SpeechRadioGroup 
-                        label="Is a reduced work schedule or time off for appointments medically necessary?"
-                        name="isReducedSchedule"
-                        value={formData.isReducedSchedule}
-                        onChange={handleFormChange}
-                        autoListen={currentSection === 9 && isAutoListening}
-                        onStartListening={handleStartListening}
-                        onVoiceCommand={handleVoiceCommand}
-                    />
-                </FormSection>
-
-                {/* 11. Employee Signature and Date (Q10/Signature Area) */}
-                <FormSection title="Question 11 of 11" id="section-10">
+                {/* 8. Employee Signature and Date (Q10/Signature Area) */}
+                <FormSection title="Question 8 of 8" id="section-7">
                     <div className="col-span-2">
                         <label className="text-6xl font-bold text-blue-900 mb-8 block text-center">Employee Signature and Date</label>
                         <FormInput 
@@ -754,7 +707,7 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
                             value={formData.employeeSignature} 
                             onChange={handleFormChange} 
                             required 
-                            autoListen={currentSection === 10 && isAutoListening && !formData.employeeSignature}
+                            autoListen={currentSection === 7 && isAutoListening && !formData.employeeSignature}
                             onStartListening={handleStartListening}
                             onVoiceCommand={handleVoiceCommand}
                         />
@@ -765,7 +718,7 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
                             onChange={handleFormChange}
                             type="date" 
                             required 
-                            autoListen={currentSection === 10 && isAutoListening && formData.employeeSignature && !formData.signatureDate}
+                            autoListen={currentSection === 7 && isAutoListening && formData.employeeSignature && !formData.signatureDate}
                             onStartListening={handleStartListening}
                             onVoiceCommand={handleVoiceCommand}
                         />
