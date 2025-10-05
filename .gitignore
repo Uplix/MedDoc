@@ -1,3 +1,6 @@
+*.env
+*.mp3
+*.pdf
 # Logs
 logs
 *.log
