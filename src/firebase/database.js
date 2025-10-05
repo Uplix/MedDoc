@@ -1,8 +1,8 @@
-import { doc, getDoc, setDoc, serverTimestamp, addDoc, collection } from "firebase/firestore";
-import { auth } from "./initialize";
+import { addDoc, collection } from "firebase/firestore";
+import { auth, db } from "./initialize";
 
 export async function uploadDocument(upload){
-    if (!auth.currentUser.email) {
+    if (!auth.currentUser || !auth.currentUser.email) {
         return {
             type: "error",
             content: "Not signed in"
@@ -10,12 +10,25 @@ export async function uploadDocument(upload){
     }
 
     try {
-        const docRef = await addDoc(collection(db, "Offices", "traneyes", "forms"), upload);
+        console.log("Upload data:", upload);
+        
+        // Ensure upload data is a plain object and doesn't contain undefined values
+        const sanitizedUpload = JSON.parse(JSON.stringify(upload));
+        
+        const docRef = collection(db, "Offices", "traneyes", "forms", "formTrial");
+        await addDoc(docRef, sanitizedUpload);
+        
+        return {
+            type: "success",
+            content: "Document uploaded successfully",
+            docRef: docRef
+        };
         
     } catch (error) {
-        console.error("Error creating user document", error);
-        throw error;
+        console.error("Error creating document:", error);
+        return {
+            type: "error",
+            content: error.message
+        };
     }
-    }
-    return userRef;
-    }
+}
