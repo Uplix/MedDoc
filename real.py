@@ -5,8 +5,11 @@ import pdfscraper as pd
 # ---------------------------
 # 1. Initialize Firebase Admin
 # ---------------------------
-cred = credentials.Certificate("serviceAccountKey.json")
-firebase_admin.initialize_app(cred)
+
+if not firebase_admin._apps:
+    cred = credentials.Certificate(r"C:\Users\ethan\Downloads\serviceAccountKey.json")
+    firebase_admin.initialize_app(cred)
+
 db = firestore.client()
 
 
@@ -22,21 +25,25 @@ def yes_no_to_bool(value):
     return False
 
 
-def fetch_form_data(doc_id):
+def fetch_form_data():
     """Fetch Firestore document data by ID."""
-    doc_ref = db.collection("forms").document(doc_id)
-    doc = doc_ref.get()
-    if not doc.exists:
-        raise ValueError(f"No document found with ID {doc_id}")
-    return doc.to_dict()
+    collection_ref = db.collection("Offices").document("traneyes").collection("forms")
+    docs = collection_ref.stream()
+    for doc in docs:
+        if doc.exists:
+            print(f"📥 Retrieved Firestore data for {doc.id}")
+            document_data = doc.to_dict()
+            fill_pdf_from_firestore(document_data)
+        # print(f"Found document with ID: {doc.id}")
+    # if not doc.exists:
+    #     raise ValueError(f"No document found with ID {doc_id}")
+    # return doc.to_dict()
 
 
 # ---------------------------
 # 3. Firestore → PDF Mapping
 # ---------------------------
-def fill_pdf_from_firestore(doc_id):
-    data = fetch_form_data(doc_id)
-    print(f"📥 Retrieved Firestore data for {doc_id}")
+def fill_pdf_from_firestore(data):
 
     emp = data.get("employeeInformation", {})
     pat = data.get("patientInformation", {})
@@ -78,5 +85,6 @@ def fill_pdf_from_firestore(doc_id):
 # 4. Example Run
 # ---------------------------
 if __name__ == "__main__":
-    test_doc_id = "example_doc_id"  # Replace with real Firestore document ID
-    fill_pdf_from_firestore(test_doc_id)
+    # test_doc_id = "example_doc_id"  # Replace with real Firestore document ID
+    # fill_pdf_from_firestore(test_doc_id)
+    fetch_form_data()

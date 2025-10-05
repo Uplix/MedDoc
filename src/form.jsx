@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { ArrowLeft, Volume2, Mic, MicOff, HelpCircle, X } from 'lucide-react';
 import { question } from './api/bedrockService';
-import { uploadDocument } from './firebase/database';
-import { useNavigate } from 'react-router';
 
 // --- 1. Custom Speech Recognition Hook ---
 /**
@@ -790,7 +788,6 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
             rawFormData: formData
         };
 
-        await uploadDocument(formSubmission)
         // Log the JSON to console
         // console.log("Form Submission JSON:", JSON.stringify(formSubmission, null, 2));
         
@@ -804,11 +801,9 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
         // link.click();
         // document.body.removeChild(link);
         // URL.revokeObjectURL(url);
-        
+
         // Show success message
-        await speak("Form submitted successfully. The response data has been saved as a JSON file.");
-        
-        useNavigate("/form")
+        speak("Form submitted successfully. The response data has been saved as a JSON file.");
         
         // Optionally, you can send this data to your backend
         // sendToBackend(formSubmission);
