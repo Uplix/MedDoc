@@ -15,7 +15,7 @@ export async function uploadDocument(upload){
         // Ensure upload data is a plain object and doesn't contain undefined values
         const sanitizedUpload = JSON.parse(JSON.stringify(upload));
         
-        const docRef = collection(db, "Offices", "traneyes", "forms", "formTrial");
+        const docRef = collection(db, "Offices", "traneyes", "forms");
         await addDoc(docRef, sanitizedUpload);
         
         return {
