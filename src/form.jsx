@@ -158,6 +158,97 @@ const useSpeechSynthesis = () => {
     return { speak, stop, isSpeaking };
 };
 
+// --- 3. Date Parsing Helper Function ---
+/**
+ * Parse spoken date input and convert to YYYY-MM-DD format for date inputs
+ */
+const parseDateFromSpeech = (spokenText) => {
+    const cleanText = spokenText.toLowerCase().trim();
+    
+    // Handle common date formats people might speak
+    const datePatterns = [
+        // "January 15th 2023" or "January 15 2023"
+        /(\w+)\s+(\d{1,2})(?:st|nd|rd|th)?\s+(\d{4})/,
+        // "15th of January 2023" or "15 of January 2023"
+        /(\d{1,2})(?:st|nd|rd|th)?\s+of\s+(\w+)\s+(\d{4})/,
+        // "1/15/2023" or "01/15/2023"
+        /(\d{1,2})\/(\d{1,2})\/(\d{4})/,
+        // "1-15-2023" or "01-15-2023"
+        /(\d{1,2})-(\d{1,2})-(\d{4})/,
+        // "2023-01-15" (already in correct format)
+        /(\d{4})-(\d{1,2})-(\d{1,2})/
+    ];
+    
+    const monthNames = {
+        'january': '01', 'jan': '01',
+        'february': '02', 'feb': '02',
+        'march': '03', 'mar': '03',
+        'april': '04', 'apr': '04',
+        'may': '05',
+        'june': '06', 'jun': '06',
+        'july': '07', 'jul': '07',
+        'august': '08', 'aug': '08',
+        'september': '09', 'sep': '09', 'sept': '09',
+        'october': '10', 'oct': '10',
+        'november': '11', 'nov': '11',
+        'december': '12', 'dec': '12'
+    };
+    
+    // Try pattern matching
+    for (const pattern of datePatterns) {
+        const match = cleanText.match(pattern);
+        if (match) {
+            if (pattern.source.includes('\\w+')) {
+                // Handle month name patterns
+                if (match[1] && monthNames[match[1]]) {
+                    // "January 15th 2023" format
+                    const month = monthNames[match[1]];
+                    const day = match[2].padStart(2, '0');
+                    const year = match[3];
+                    return `${year}-${month}-${day}`;
+                } else if (match[2] && monthNames[match[2]]) {
+                    // "15th of January 2023" format
+                    const day = match[1].padStart(2, '0');
+                    const month = monthNames[match[2]];
+                    const year = match[3];
+                    return `${year}-${month}-${day}`;
+                }
+            } else if (match[1] && match[2] && match[3]) {
+                // Handle numeric patterns
+                if (match[1].length === 4) {
+                    // "2023-01-15" format (already correct)
+                    const year = match[1];
+                    const month = match[2].padStart(2, '0');
+                    const day = match[3].padStart(2, '0');
+                    return `${year}-${month}-${day}`;
+                } else {
+                    // "1/15/2023" or "1-15-2023" format
+                    const month = match[1].padStart(2, '0');
+                    const day = match[2].padStart(2, '0');
+                    const year = match[3];
+                    return `${year}-${month}-${day}`;
+                }
+            }
+        }
+    }
+    
+    // Try parsing with native Date constructor as fallback
+    try {
+        const date = new Date(cleanText);
+        if (!isNaN(date.getTime())) {
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+    } catch (e) {
+        console.warn('Date parsing failed:', e);
+    }
+    
+    // If all parsing fails, return original text
+    return spokenText;
+};
+
 // --- 2. Helper Components ---
 
 const BackButton = ({ onClick }) => (
@@ -180,7 +271,7 @@ const FormInput = ({ label, name, value, onChange, required = false, type = 'tex
 
     // Handle auto-start listening when component mounts or autoListen changes
     useEffect(() => {
-        if (autoListen && isSupported && !isListening && !hasAutoStarted.current && type === 'text') {
+        if (autoListen && isSupported && !isListening && !hasAutoStarted.current && (type === 'text' || type === 'date')) {
             hasAutoStarted.current = true;
             if (onStartListening) {
                 onStartListening();
@@ -215,11 +306,18 @@ const FormInput = ({ label, name, value, onChange, required = false, type = 'tex
                 return;
             }
             
+            let processedValue = transcript;
+            
+            // Enhanced date processing for date type inputs
+            if (type === 'date') {
+                processedValue = parseDateFromSpeech(transcript);
+            }
+            
             // Create a synthetic event to maintain compatibility with existing onChange handler
             const syntheticEvent = {
                 target: {
                     name,
-                    value: transcript,
+                    value: processedValue,
                     type
                 }
             };
@@ -251,7 +349,7 @@ const FormInput = ({ label, name, value, onChange, required = false, type = 'tex
                     className="p-8 text-4xl text-blue-900 border-4 border-gray-300 rounded-2xl focus:ring-4 focus:ring-blue-500 focus:border-blue-500 h-24 pr-32"
                     required={required}
                 />
-                {isSupported && type === 'text' && (
+                {isSupported && (type === 'text' || type === 'date') && (
                     <button
                         type="button"
                         onClick={handleSpeechToggle}
@@ -268,7 +366,11 @@ const FormInput = ({ label, name, value, onChange, required = false, type = 'tex
             </div>
             {isListening && (
                 <div className="mt-4 text-2xl text-blue-600 font-semibold text-center">
-                    🎤 Listening... Speak your answer or say "next", "back", or "repeat"
+                    🎤 Listening... 
+                    {type === 'date' 
+                        ? 'Say a date like "January 15th 2023" or "1/15/2023"' 
+                        : 'Speak your answer'
+                    } or say "next", "back", or "repeat"
                 </div>
             )}
             {autoListen && !isListening && !value && (
