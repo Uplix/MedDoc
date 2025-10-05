@@ -20,9 +20,20 @@ class SimpleAIAgent:
         """Convert text to speech and play it"""
         text_to_speech_and_play(text)
     
-    def listen_for_input(self, duration=5):
-        """Record audio and convert to text"""
-        return record_and_transcribe(duration)
+    def listen_for_input(self):
+        """Record audio with voice activity detection"""
+        import subprocess
+        import tempfile
+        
+        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp_file:
+            # Record with silence detection - stops when 1.5 seconds of silence detected
+            subprocess.run([
+                'sox', '-d', '-r', '16000', '-c', '1', tmp_file.name,
+                'silence', '1', '0.1', '1%', '1', '1.5', '1%'
+            ], check=True)
+            
+            # Use existing transcribe function
+            return record_and_transcribe(0)
     
     def chat(self, user_input):
         # Add user message to history
