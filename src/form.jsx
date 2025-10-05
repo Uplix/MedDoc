@@ -756,6 +756,59 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
         }
     };
 
+    const handleSubmitForm = async () => {
+        // Create comprehensive JSON object with all form responses
+        const formSubmission = {
+            submissionMetadata: {
+                submittedAt: new Date().toISOString(),
+                formVersion: "1.0",
+                userAgent: navigator.userAgent,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            },
+            employeeInformation: {
+                fullName: formData.employeeName || "",
+                signature: formData.employeeSignature || "",
+                signatureDate: formData.signatureDate || ""
+            },
+            patientInformation: {
+                fullName: formData.patientName || "",
+                isFamilyMember: formData.isFamilyMember || null
+            },
+            medicalCondition: {
+                dateCommenced: formData.conditionCommenced || "",
+                probableDuration: formData.conditionDuration || "",
+                isSeriousHealthCondition: formData.isSeriousHealthCondition || null
+            },
+            workCapacity: {
+                employeeAbleToWork: formData.employeeAbleToWork || null
+            },
+            careRequirements: {
+                patientRequiresAssistance: formData.patientRequiresAssistance || null
+            },
+            rawFormData: formData
+        };
+
+        // Log the JSON to console
+        // console.log("Form Submission JSON:", JSON.stringify(formSubmission, null, 2));
+        
+        // // You can also download the JSON as a file
+        // const jsonBlob = new Blob([JSON.stringify(formSubmission, null, 2)], { type: 'application/json' });
+        // const url = URL.createObjectURL(jsonBlob);
+        // const link = document.createElement('a');
+        // link.href = url;
+        // link.download = `medical-form-submission-${new Date().toISOString().split('T')[0]}.json`;
+        // document.body.appendChild(link);
+        // link.click();
+        // document.body.removeChild(link);
+        // URL.revokeObjectURL(url);
+
+        // Show success message
+        speak("Form submitted successfully. The response data has been saved as a JSON file.");
+        
+        // Optionally, you can send this data to your backend
+        // sendToBackend(formSubmission);
+    };
+
     const handleStartListening = () => {
         // Called when auto-listening starts
         console.log('Auto-listening started for section:', currentSection);
@@ -955,7 +1008,7 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
                             <button onClick={onBack} className="py-3 px-8 bg-red-200 text-red-800 font-bold rounded-xl hover:bg-red-300 transition">
                                 Back to Start
                             </button>
-                            <button type="submit" className="py-3 px-8 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 transition">
+                            <button onClick={handleSubmitForm} className="py-3 px-8 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 transition">
                                 SUBMIT FORM
                             </button>
                         </div>
