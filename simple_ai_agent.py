@@ -2,6 +2,7 @@ import boto3
 import json
 import os
 from dotenv import load_dotenv
+from polly import text_to_speech_and_play, record_and_transcribe
 
 load_dotenv()
 
@@ -14,6 +15,14 @@ class SimpleAIAgent:
             region_name=os.getenv('AWS_DEFAULT_REGION')
         )
         self.conversation_history = []
+    
+    def speak_response(self, text):
+        """Convert text to speech and play it"""
+        text_to_speech_and_play(text)
+    
+    def listen_for_input(self, duration=5):
+        """Record audio and convert to text"""
+        return record_and_transcribe(duration)
     
     def chat(self, user_input):
         # Add user message to history
@@ -54,15 +63,33 @@ class SimpleAIAgent:
         self.conversation_history.append({"role": "assistant", "content": assistant_message})
         
         return assistant_message
+    
+    def voice_chat(self, duration=5):
+        """Voice-enabled chat: listen, process, and speak response"""
+        print("Listening...")
+        user_input = self.listen_for_input(duration)
+        print(f"You said: {user_input}")
+        
+        response = self.chat(user_input)
+        print(f"Agent: {response}")
+        
+        self.speak_response(response)
+        return response
 
 if __name__ == "__main__":
     agent = SimpleAIAgent()
     
-    print("FoodHero AI Agent - Type 'quit' to exit")
+    print("FoodHero AI Agent - Commands: 'quit', 'voice', or type message")
     while True:
         user_input = input("\nYou: ")
         if user_input.lower() == 'quit':
             break
-        
-        response = agent.chat(user_input)
-        print(f"Agent: {response}")
+        elif user_input.lower() == 'voice':
+            agent.voice_chat()
+        else:
+            response = agent.chat(user_input)
+            print(f"Agent: {response}")
+            # Optionally speak the response
+            speak = input("Speak response? (y/n): ")
+            if speak.lower() == 'y':
+                agent.speak_response(response)
