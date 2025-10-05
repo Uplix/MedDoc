@@ -21,19 +21,8 @@ class SimpleAIAgent:
         text_to_speech_and_play(text)
     
     def listen_for_input(self):
-        """Record audio with voice activity detection"""
-        import subprocess
-        import tempfile
-        
-        with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp_file:
-            # Record with silence detection - stops when 1.5 seconds of silence detected
-            subprocess.run([
-                'sox', '-d', '-r', '16000', '-c', '1', tmp_file.name,
-                'silence', '1', '0.1', '1%', '1', '1.5', '1%'
-            ], check=True)
-            
-            # Use existing transcribe function
-            return record_and_transcribe(0)
+        """Record audio and convert to text"""
+        return record_and_transcribe(5)
     
     def chat(self, user_input):
         # Add user message to history
@@ -75,6 +64,34 @@ class SimpleAIAgent:
         
         return assistant_message
     
+    def summarize(self, text):
+        """Summarize text into 1 sentence and speak it"""
+        # Prepare request for summarization
+        prompt = f"Summarize the following text in exactly one sentence:\n\n{text}\n\nSummary:"
+        
+        body = json.dumps({
+            "inputText": prompt,
+            "textGenerationConfig": {
+                "maxTokenCount": 100,
+                "temperature": 0.3,
+                "topP": 0.9
+            }
+        })
+        
+        response = self.bedrock.invoke_model(
+            body=body,
+            modelId='amazon.titan-text-express-v1',
+            accept='application/json',
+            contentType='application/json'
+        )
+        
+        response_body = json.loads(response.get('body').read())
+        summary = response_body['results'][0]['outputText'].strip()
+        
+        # Speak the summary
+        self.speak_response(summary)
+        return summary
+    
     def voice_chat(self, duration=5):
         """Voice-enabled chat: listen, process, and speak response"""
         print("Listening...")
@@ -96,7 +113,7 @@ if __name__ == "__main__":
         try:
             user_input = agent.listen_for_input()
             
-            if "quit" in user_input.lower() or "exit" in user_input.lower():
+            if "quit" in user_input.lower() or "bye" in user_input.lower():
                 agent.speak_response("Goodbye!")
                 break
             
