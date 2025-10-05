@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { ArrowLeft, Volume2, Mic, MicOff } from 'lucide-react';
+import { ArrowLeft, Volume2, Mic, MicOff, HelpCircle, X } from 'lucide-react';
+import { question } from './api/bedrockService';
 
 // --- 1. Custom Speech Recognition Hook ---
 /**
@@ -434,7 +435,234 @@ const StartScreen = ({ onStart, speak }) => {
     );
 };
 
-// --- 4. Form Page Component (Integrated with Sequential TTS) ---
+// --- 4. Chatbot Modal Component ---
+
+const ChatbotModal = ({ isOpen, onClose, speak }) => {
+    const { isListening, transcript, isSupported, startListening, stopListening, resetTranscript } = useSpeechRecognition();
+    const [messages, setMessages] = useState([
+        { 
+            id: 1, 
+            type: 'bot', 
+            content: 'Hello! I\'m your medical form assistant. I can help you with any questions about filling out this form. You can type or use voice input to chat with me.',
+            timestamp: new Date()
+        }
+    ]);
+    const [inputText, setInputText] = useState('');
+    const [isTyping, setIsTyping] = useState(false);
+    const messagesEndRef = useRef(null);
+
+    // Scroll to bottom when new messages are added
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [messages]);
+
+    // Handle speech input
+    useEffect(() => {
+        if (transcript && !isListening) {
+            setInputText(transcript);
+            resetTranscript();
+        }
+    }, [transcript, isListening, resetTranscript]);
+
+    const handleSendMessage = async () => {
+        if (!inputText.trim()) return;
+
+        const userMessage = {
+            id: Date.now(),
+            type: 'user',
+            content: inputText.trim(),
+            timestamp: new Date()
+        };
+        
+        setMessages(prev => [...prev, userMessage]);
+        setInputText('');
+        setIsTyping(true);
+
+        const botResponse = {
+            id: Date.now() + 1,
+            type: 'bot',
+            content: '',
+            timestamp: new Date()
+        };
+        
+        try{
+            const res = await question(userMessage.content);
+            botResponse.content = res.data.response
+        }catch(error){
+            botResponse.content = error
+        }finally{
+            setMessages(prev => [...prev, botResponse]);
+            setIsTyping(false);
+            speak(botResponse.content);
+        }
+        
+        
+        // Simulate bot response (you'll replace this with actual chatbot integration)
+        // setTimeout(() => {
+        //     const botResponse = {
+        //         id: Date.now() + 1,
+        //         type: 'bot',
+        //         content: 'I understand you\'re asking about: "' + userMessage.content + '". I\'m here to help with your medical form. You can connect your actual chatbot API here.',
+        //         timestamp: new Date()
+        //     };
+        //     setMessages(prev => [...prev, botResponse]);
+        //     setIsTyping(false);
+            
+        //     // Optionally speak the bot response
+            
+        // }, 1500);
+    };
+
+    const handleSpeechToggle = () => {
+        if (isListening) {
+            stopListening();
+        } else {
+            startListening();
+        }
+    };
+
+    const formatTime = (timestamp) => {
+        return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl h-5/6 mx-4 relative flex flex-col">
+                {/* Header */}
+                <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                    <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                            <span className="text-white font-bold text-lg">🤖</span>
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-bold text-blue-900">Medical Form Assistant</h2>
+                            <p className="text-sm text-gray-600">Always here to help</p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-2 text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                        <X className="w-8 h-8" />
+                    </button>
+                </div>
+
+                {/* Chat Messages */}
+                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                    {messages.map((message) => (
+                        <div
+                            key={message.id}
+                            className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+                        >
+                            <div className={`max-w-xs lg:max-w-md xl:max-w-lg ${
+                                message.type === 'user' 
+                                    ? 'bg-blue-500 text-white' 
+                                    : 'bg-gray-100 text-gray-800'
+                            } rounded-2xl px-4 py-3`}>
+                                <p className="text-sm">{message.content}</p>
+                                <p className={`text-xs mt-1 ${
+                                    message.type === 'user' ? 'text-blue-100' : 'text-gray-500'
+                                }`}>
+                                    {formatTime(message.timestamp)}
+                                </p>
+                            </div>
+                        </div>
+                    ))}
+                    
+                    {isTyping && (
+                        <div className="flex justify-start">
+                            <div className="bg-gray-100 text-gray-800 rounded-2xl px-4 py-3 max-w-xs">
+                                <div className="flex space-x-1">
+                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <div ref={messagesEndRef} />
+                </div>
+
+                {/* Voice Input Area */}
+                <div className="border-t border-gray-200 p-8">
+                    <div className="flex flex-col items-center space-y-6">
+                        {/* Large Microphone Button */}
+                        {isSupported ? (
+                            <button
+                                onClick={handleSpeechToggle}
+                                className={`p-8 rounded-full transition-all duration-200 shadow-lg ${
+                                    isListening 
+                                        ? 'bg-red-500 text-white animate-pulse scale-110' 
+                                        : 'bg-blue-500 text-white hover:bg-blue-600 hover:scale-105'
+                                }`}
+                                title={isListening ? "Stop recording" : "Start voice input"}
+                            >
+                                {isListening ? <MicOff className="w-16 h-16" /> : <Mic className="w-16 h-16" />}
+                            </button>
+                        ) : (
+                            <div className="text-gray-500 text-lg">Voice input not supported in this browser</div>
+                        )}
+                        
+                        {/* Voice Status */}
+                        {isListening && (
+                            <div className="text-xl text-red-500 font-semibold animate-pulse">
+                                🎤 Listening... Speak your question
+                            </div>
+                        )}
+                        
+                        {/* Current Input Display */}
+                        {inputText && (
+                            <div className="bg-blue-50 rounded-2xl p-4 w-full max-w-md border-2 border-blue-200">
+                                <p className="text-sm text-gray-600 mb-1">You're saying:</p>
+                                <p className="text-lg text-blue-800 font-medium">"{inputText}"</p>
+                            </div>
+                        )}
+                        
+                        {/* Send Button - Only show when there's input */}
+                        {inputText.trim() && (
+                            <button
+                                onClick={handleSendMessage}
+                                className="px-8 py-3 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors font-semibold text-lg shadow-lg"
+                            >
+                                Send Message
+                            </button>
+                        )}
+                    </div>
+                    
+                    {/* Quick Actions */}
+                    <div className="flex flex-wrap gap-2 mt-6 justify-center">
+                        <button 
+                            onClick={() => setInputText("How do I fill out this form?")}
+                            className="px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm hover:bg-blue-200 transition-colors"
+                        >
+                            How do I fill out this form?
+                        </button>
+                        <button 
+                            onClick={() => setInputText("What information do I need?")}
+                            className="px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm hover:bg-blue-200 transition-colors"
+                        >
+                            What information do I need?
+                        </button>
+                        <button 
+                            onClick={() => setInputText("Help with navigation")}
+                            className="px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm hover:bg-blue-200 transition-colors"
+                        >
+                            Help with navigation
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- 5. Form Page Component (Integrated with Sequential TTS) ---
 
 const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
     const [currentSection, setCurrentSection] = useState(0);
@@ -736,6 +964,23 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
 
             </div>
             
+            {/* Question Mark Help Button - Top Right */}
+            <button
+                onClick={() => setShowHelpModal(true)}
+                className="fixed top-6 right-6 p-4 bg-blue-500 text-white rounded-full shadow-lg hover:bg-blue-600 transition z-30 flex items-center justify-center"
+                aria-label="Chat with assistant"
+                title="Chat with medical form assistant"
+            >
+                <HelpCircle className="w-20 h-20" />
+            </button>
+            
+            {/* Help Modal */}
+            <ChatbotModal 
+                isOpen={showHelpModal} 
+                onClose={() => setShowHelpModal(false)} 
+                speak={speak}
+            />
+            
             {/* Control Bar - Moved to bottom */}
             <div className="fixed bottom-6 right-6 flex items-center space-x-4 z-30">
                 {isSpeaking ? (
@@ -764,7 +1009,7 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
     );
 };
 
-// --- 5. Main Application Component (Handling Routing) ---
+// --- 6. Main Application Component (Handling Routing) ---
 
 const App = () => {
     // State to manage the view: 'start' or 'form'

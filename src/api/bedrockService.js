@@ -8,12 +8,11 @@ const apiClient = axios.create({
   },
 });
 
-export const understandRequest = (prompt) => {
+export const question = (prompt) => {
   // Create a simpler payload object.
   // No need to stringify the inner 'body' anymore.
   const payload = {
-    route: 'understand-request',
-    prompt: prompt, // Send the prompt directly
+    prompt: prompt // Send the prompt directly
   };
   return apiClient.post('/api', payload);
 };
