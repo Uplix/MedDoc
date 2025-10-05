@@ -152,7 +152,7 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
         signatureDate: ''
     });
     
-    // Define all section titles based on FMLA/CFRA form structure
+    // Define all section titles and content based on FMLA/CFRA form structure
     const sections = useMemo(() => ([
         'Full Name', // Maps to Q1
         'Patient Name and Relationship', // Maps to Q2
@@ -165,6 +165,20 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
         'Intermittent Leave Request', // Maps to Q9 (part 1)
         'Reduced Schedule / Time Off', // Maps to Q9 (part 2)
         'Employee Signature and Date', // Maps to Q10 / Signature Area
+    ]), []);
+
+    const sectionContent = useMemo(() => ([
+        'Full Name',
+        'Patient Full Name if different. Is the patient the employee\'s family member?',
+        'Date Condition Commenced',
+        'Probable Duration, for example, 6 weeks, 3 months, permanent',
+        'Does the patient\'s condition qualify as a serious health condition?',
+        'Is the employee able to perform work of any kind?',
+        'Does the patient require assistance for basic needs such as medical or hygiene?',
+        'Estimated Period of Time Care is Needed',
+        'Is intermittent leave medically necessary?',
+        'Is a reduced work schedule or time off for appointments medically necessary?',
+        'Digital Signature and Date Signed'
     ]), []);
 
     // TTS Logic for Sequential Reading (Triggered when currentSection changes)
@@ -182,11 +196,12 @@ const FormPage = ({ onBack, stop, isSpeaking, speak }) => {
     useEffect(() => {
         if (currentSection < sections.length) {
             const sectionTitle = sections[currentSection];
+            const content = sectionContent[currentSection];
             
-            // Speak only the current section's title
-            speak(sectionTitle);
+            // Speak section title and content
+            speak(`${sectionTitle}. ${content}`);
         }
-    }, [currentSection, sections, speak]); 
+    }, [currentSection, sections, sectionContent, speak]); 
 
     // General Form Handlers
     const handleFormChange = (e) => {
